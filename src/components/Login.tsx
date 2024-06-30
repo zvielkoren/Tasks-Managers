@@ -1,68 +1,57 @@
-"use client";
-import React, { useRef } from "react";
-import InputBox from "./InputBox";
-import { Button } from "./Button";
-import Link from "next/link";
-import { signIn } from "next-auth/react";
+// @/components/Login.tsx
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 type Props = {
-  className?: string;
-  callbackUrl?: string;
   error?: string;
+  callbackUrl?: string;
 };
 
-const Login = (props: Props) => {
+const Login: React.FC<Props> = ({ error, callbackUrl }) => {
   const router = useRouter();
-  const userName = useRef("");
-  const pass = useRef("");
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const res = await signIn("credentials", {
-      username: userName.current,
-      password: pass.current,
+    const result = await signIn("credentials", {
       redirect: false,
+      email,
+      password,
     });
 
-    if (!res?.error) {
-      router.push(props.callbackUrl ?? "http://localhost:3000");
+    if (result && !result.error) {
+      router.push(callbackUrl || "/"); // Redirect to homepage or specified callback URL after successful login
+    } else {
+      console.error("Failed to sign in:", result?.error);
     }
   };
+
   return (
-    <div className={props.className}>
-      <div className="bg-gradient-to-b  from-slate-50 to-slate-200 p-2 text-center text-slate-600">
-        Login Form
+    <form onSubmit={handleSubmit}>
+      <h2>Login Form</h2>
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      <div>
+        <label>Email</label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
       </div>
-      {!!props.error && (
-        <p className="bg-red-100 text-red-600 text-center p-2">
-          Authentication Failed
-        </p>
-      )}
-      <form onSubmit={onSubmit} className="p-2 flex flex-col gap-3">
-        <InputBox
-          name="username"
-          labelText="User Name"
-          onChange={(e) => (userName.current = e.target.value)}
-        />
-        <InputBox
-          name="password"
+      <div>
+        <label>Password</label>
+        <input
           type="password"
-          labelText="Password"
-          onChange={(e) => (pass.current = e.target.value)}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
         />
-        <div className="flex items-center justify-center mt-2 gap-2">
-          <Button type="submit" className="w-28">
-            Sign In
-          </Button>
-          <Link
-            href={props.callbackUrl ?? "/"}
-            className="w-28 border border-red-600 text-center py-2 rounded-md text-red-600 transition hover:bg-red-600 hover:text-white hover:border-transparent active:scale-95"
-          >
-            Cancel
-          </Link>
-        </div>
-      </form>
-    </div>
+      </div>
+      <button type="submit">Login</button>
+    </form>
   );
 };
 
