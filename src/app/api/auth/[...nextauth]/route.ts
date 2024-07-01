@@ -1,33 +1,36 @@
-import NextAuth from "next-auth/next";
+import prisma from "@/app/lib/prisma";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { login } from "@/lib/auth"; // Adjust import path based on your project structure
 
-const handler = NextAuth({
+export const authOptions: AuthOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: "credentials",
       credentials: {
-        username: { label: "Username", type: "text", placeholder: "jsmith" },
-        password: { label: "Password", type: "password" },
+        email: { label: "email", type: "email" },
+        password: { label: "password", type: "password" },
       },
-      async authorize(credentials, req) {
-        // Ensure both username and password are provided
-        if (!credentials?.username || !credentials?.password) return null;
+      async authorize(credentials) {
+        const user = await prisma.user.findUnique({
+          where: { email: credentials?.email },
+        });
 
-        try {
-          // Call your login function to authenticate the user
-          const user = await login(credentials.username, credentials.password);
-          return user; // Return the authenticated user object
-        } catch (e) {
-          console.error("Error in login:", e);
-          return null; // Return null if login fails
-        }
+        if (!user) throw new Error("user with that email does not exist");
+
+        // ⚠️ WARNING: DO NOT do this in real-world development
+        if (user.password !== credentials?.password)
+          throw new Error("incorrect password");
+
+        return user;
       },
     }),
   ],
-  pages: {
-    signIn: "/signIn", // Specify your custom signIn page route
-  },
-});
+  debug: process.env.NODE_ENV === "development",
+  session: { strategy: "jwt" },
+  secret: "secret", // store this in a .env file
+};
 
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };

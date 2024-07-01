@@ -1,63 +1,42 @@
-'use client'
-import { useState, useEffect } from 'react';
-import TaskForm from '@/components/TaskForm';
-import TaskList from '@/components/TaskList';
+import { getServerSession } from "next-auth";
+import { authOptions } from "./api/auth/[...nextauth]/route";
+import prisma from "@/app/lib/prisma";
+import Link from "next/link";
+import LogoutButton from "@/app/components/LogoutButton";
 
-interface Task {
-  taskId: string;
-  taskName: string;
-  category: string;
-  projectId: string;
-  startDate?: string;
-  endDate?: string;
-  location?: string;
-  contact?: string;
-}
+const getCurrentUser = async () => {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) return;
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
+    if (!currentUser) return;
+    return currentUser;
+  } catch (e: any) {
+    // simply ignores if no user is logged in
+    return;
+  }
+};
+export default async function Home() {
+  const user = await getCurrentUser();
 
-export default function Home() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  const fetchTasks = async () => {
-    try {
-      const response = await fetch('/api/tasks');
-      if (!response.ok) {
-        throw new Error('Failed to fetch tasks');
-      }
-      const data: Task[] = await response.json();
-      setTasks(data);
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-    }
-  };
-
-  const addTask = async (task: Task) => {
-    try {
-      const response = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(task),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to add task');
-      }
-      const newTask: Task = await response.json();
-      setTasks([...tasks, newTask]);
-    } catch (error) {
-      console.error('Error adding task:', error);
-    }
-  };
+  if (!user) 
+    return (
+      <>
+        <h3>You are currently not logged in!</h3>
+        <Link href="/login">Login to my account</Link>
+      </>
+    );
 
   return (
-    <div>
-      <h1>Task Manager</h1>
-      <TaskForm addTask={addTask} />
-      <TaskList tasks={tasks} />
-    </div>
+    <>
+      
+      <h3>Name: {user.name}</h3>
+      <p>Email: {user.email}</p>
+      <p>Role: {user.role}</p>
+      <LogoutButton/>
+
+    </>
   );
 }
