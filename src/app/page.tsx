@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]/route";
 import prisma from "@/app/lib/prisma";
+import Image from 'next/image';
 import Link from "next/link";
 import LogoutButton from "@/app/components/LogoutButton";
 
@@ -31,12 +32,16 @@ export default async function Home() {
 
   return (
     <>
-      
+      <Image
+        style={{ borderRadius: "50%" }}
+        src={user.image || "/default.jpg"}
+        width={100}
+        height={100}
+        alt="Profile Image"
+      />
       <h3>Name: {user.name}</h3>
       <p>Email: {user.email}</p>
       <p>Role: {user.role}</p>
-      <LogoutButton/>
-
-    </>
+      <LogoutButton/>    </>
   );
 }
